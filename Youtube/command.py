@@ -1,4 +1,4 @@
-# ©️ LISA-KOREA | @LISA_FAN_LK | NT_BOT_CHANNEL | LISA-KOREA/YouTube-Video-Download-Bot
+# ©️ TUSHAR DAVERA | @tushardavera | NT_BOT_CHANNEL | LISA-KOREA/YouTube-Video-Download-Bot
 
 # [⚠️ Do not change this repo link ⚠️] :- https://github.com/LISA-KOREA/YouTube-Video-Download-Bot
 
@@ -61,11 +61,11 @@ async def start(client, message):
         reply_markup=InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton('📍 Update Channel', url='https://t.me/NT_BOT_CHANNEL'),
+                InlineKeyboardButton('📍 Update Channel', url='https://t.me/Ethicals_hacking'),
             ],
             [
-                InlineKeyboardButton('👩‍💻 Developer', url='https://t.me/LISA_FAN_LK'),
-                InlineKeyboardButton('👥 Support Group', url='https://t.me/NT_BOTS_SUPPORT'),
+                InlineKeyboardButton('👩‍💻 Developer', url='https://t.me/tushardavera'),
+                InlineKeyboardButton('👥 Support Group', url='https://t.me/Ethical_hacking_group'),
             ],
             [
                 InlineKeyboardButton('⛔️ Close', callback_data='cancel')
@@ -83,7 +83,7 @@ To upload a YouTube video, simply send me the YouTube link.
 
 Enjoy using the bot!
 
-©️ Channel : @NT_BOT_CHANNEL
+©️ Channel : @Ethicals_hacking
     """
     await message.reply_text(help_text)
 
