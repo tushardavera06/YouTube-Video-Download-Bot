@@ -1,4 +1,4 @@
-# ©️ LISA-KOREA | @LISA_FAN_LK | NT_BOT_CHANNEL | LISA-KOREA/YouTube-Video-Download-Bot
+# ©️ Tushar Davera  | @tushardavera | NT_BOT_CHANNEL | LISA-KOREA/YouTube-Video-Download-Bot
 
 # [⚠️ Do not change this repo link ⚠️] :- https://github.com/LISA-KOREA/YouTube-Video-Download-Bot
 
