@@ -41,23 +41,24 @@ async def youtube_downloader(client, message):
             vid_key = str(uuid.uuid4())[:8]
             YT_CACHE[vid_key] = url
 
+            # 👉 Yahi part change kiya gaya hai (buttons ka text)
             for f in formats:
                 fmt_id = f.get("format_id")
-                note = f.get("format_note") or f.get("format")
                 ext = f.get("ext")
-                size = f.get("filesize") or f.get("filesize_approx")
+                height = f.get("height")
 
-                # ✅ IMPORTANT FIX:
-                # Sirf wahi formats dikhana jisme video + audio dono ho
+                # Sirf wahi formats jisme video + audio dono ho
                 acodec = f.get("acodec")
                 vcodec = f.get("vcodec")
-
-                # Agar format id nahi, ya audio/video me se koi missing ho to skip
                 if (not fmt_id) or (not acodec) or acodec == "none" or (not vcodec) or vcodec == "none":
                     continue
 
-                size_text = humanbytes(size) if size else "Unknown"
-                text = f"{note or 'Unknown'} • {size_text}"
+                # 720p / 480p / 360p...
+                resolution = f"{height}p" if height else "Unknown"
+
+                # Final button text -> 91 - 720p - mp4
+                text = f"{fmt_id} - {resolution} - {ext}"
+
                 cb = f"ytdl|{vid_key}|{fmt_id}|{ext}|video"
 
                 if len(cb.encode()) <= 64:
@@ -108,8 +109,7 @@ async def handle_download(client, cq):
                 }],
             }
         else:
-            # ✅ FIX: yaha sirf selected format download hoga
-            # ye format already video+audio hai (upar filter lagaya hai)
+            # Sirf selected format download hoga (video+audio)
             ydl_opts = {
                 "format": fmt_id,
                 "outtmpl": output,
@@ -127,7 +127,7 @@ async def handle_download(client, cq):
             filesize = info.get("filesize") or info.get("filesize_approx")
             file_size_text = humanbytes(filesize) if filesize else "Unknown"
 
-        # Audio ke liye mp3, warna jo ext callback me aaya tha
+        # Audio ke liye mp3, warna selected ext
         file_path = f"downloads/{vid_key}.{'mp3' if mode == 'audio' else ext}"
 
         thumb_path = None
