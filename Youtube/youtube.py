@@ -18,8 +18,6 @@ from Youtube.forcesub import handle_force_subscribe, humanbytes
 YT_CACHE = {}
 
 
-
-
 @Client.on_message(filters.regex(r'^(http(s)?://)?(www\.)?(youtube\.com|youtu\.be)/.+'))
 async def youtube_downloader(client, message):
     if Config.CHANNEL:
@@ -48,29 +46,33 @@ async def youtube_downloader(client, message):
                 note = f.get("format_note") or f.get("format")
                 ext = f.get("ext")
                 size = f.get("filesize") or f.get("filesize_approx")
-                size_text = humanbytes(size) if size else "Unknown"
 
-                if not fmt_id or "audio" in str(note).lower():
+                # ✅ IMPORTANT FIX:
+                # Sirf wahi formats dikhana jisme video + audio dono ho
+                acodec = f.get("acodec")
+                vcodec = f.get("vcodec")
+
+                # Agar format id nahi, ya audio/video me se koi missing ho to skip
+                if (not fmt_id) or (not acodec) or acodec == "none" or (not vcodec) or vcodec == "none":
                     continue
 
+                size_text = humanbytes(size) if size else "Unknown"
                 text = f"{note or 'Unknown'} • {size_text}"
                 cb = f"ytdl|{vid_key}|{fmt_id}|{ext}|video"
 
                 if len(cb.encode()) <= 64:
                     buttons.append([InlineKeyboardButton(text, callback_data=cb)])
 
-
+            # Audio only option
             if duration:
                 buttons.append([
                     InlineKeyboardButton("🎵 Audio MP3", callback_data=f"ytdl|{vid_key}|bestaudio|mp3|audio")
                 ])
 
-
             await message.reply_text(
                 f"**✅ Available formats for:**\n`{title}`",
                 reply_markup=InlineKeyboardMarkup(buttons)
             )
-
 
             await processing_msg.delete()
 
@@ -106,12 +108,13 @@ async def handle_download(client, cq):
                 }],
             }
         else:
+            # ✅ FIX: yaha sirf selected format download hoga
+            # ye format already video+audio hai (upar filter lagaya hai)
             ydl_opts = {
                 "format": fmt_id,
                 "outtmpl": output,
                 "quiet": True,
                 "cookiefile": "cookies.txt",
-                "merge_output_format": "mp4",
             }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -124,7 +127,8 @@ async def handle_download(client, cq):
             filesize = info.get("filesize") or info.get("filesize_approx")
             file_size_text = humanbytes(filesize) if filesize else "Unknown"
 
-        file_path = f"downloads/{vid_key}.{ext if mode != 'audio' else 'mp3'}"
+        # Audio ke liye mp3, warna jo ext callback me aaya tha
+        file_path = f"downloads/{vid_key}.{'mp3' if mode == 'audio' else ext}"
 
         thumb_path = None
         if thumb_url:
@@ -134,7 +138,7 @@ async def handle_download(client, cq):
                         thumb_path = f"{vid_key}.jpg"
                         async with aiofiles.open(thumb_path, "wb") as f:
                             await f.write(await r.read())
-                            
+
         width, height, thumb_path = await fix_thumb(thumb_path)
 
         await cq.message.edit_text("📤 **Uploading...**")
@@ -161,7 +165,6 @@ async def handle_download(client, cq):
 
         await cq.message.edit_text("✅ **Successfully Uploaded!**")
 
-        
         if os.path.exists(file_path):
             os.remove(file_path)
         if thumb_path and os.path.exists(thumb_path):
