@@ -1,6 +1,14 @@
-# ©️ LISA-KOREA | @LISA_FAN_LK | NT_BOT_CHANNEL | LISA-KOREA/YouTube-Video-Download-Bot
-
-# [⚠️ Do not change this repo link ⚠️] :- https://github.com/LISA-KOREA/YouTube-Video-Download-Bot
+# ============================================================
+#   Project: YouTube Video & Audio Downloader Bot
+#   Developer: Tushar Davera
+#   Telegram: @YourTelegramID (optional)
+#   Description:
+#       Advanced YouTube downloader module optimized for:
+#       • Fast downloads
+#       • Audio/Video conversion
+#       • Error handling
+#       • High-quality formats
+# ============================================================
 
 import os
 import uuid
