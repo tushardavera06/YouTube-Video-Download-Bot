@@ -1,7 +1,6 @@
 # ============================================================
 #   Project: YouTube Video & Audio Downloader Bot
 #   Developer: Tushar Davera
-#   Telegram: @YourTelegramID (optional)
 #   Description:
 #       Advanced YouTube downloader module optimized for:
 #       • Fast downloads
@@ -12,7 +11,6 @@
 
 import os
 import uuid
-import asyncio
 import logging
 from typing import Dict, Any, Optional
 
@@ -30,11 +28,10 @@ from Youtube.fix_thumb import fix_thumb
 from Youtube.forcesub import handle_force_subscribe, humanbytes
 
 # =====================
-# GLOBALS / SETTINGS
+# GLOBAL SETTINGS
 # =====================
 
 YT_CACHE: Dict[str, Dict[str, Any]] = {}
-
 TELEGRAM_MAX_BYTES = 1_900_000_000
 MAX_DURATION_SECONDS = 60 * 60
 
@@ -49,84 +46,98 @@ LOG = logging.getLogger(__name__)
 # =====================
 
 def get_yt_info(url: str) -> Dict[str, Any]:
-    ydl_opts = {"quiet": True, "skip_download": True}
+    ydl_opts = {
+        "quiet": True,
+        "skip_download": True,
+        "nocheckcertificate": True
+    }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         return ydl.extract_info(url, download=False)
 
 
 def build_keyboard(cache_id: str) -> InlineKeyboardMarkup:
-    buttons = [
-        [InlineKeyboardButton("🎵 Audio (Best)", callback_data=f"yt_dl|{cache_id}|audio")],
+    return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("🎥 360p", callback_data=f"yt_dl|{cache_id}|360p"),
-            InlineKeyboardButton("🎥 720p", callback_data=f"yt_dl|{cache_id}|720p"),
+            InlineKeyboardButton("🎵 Audio (Best)", callback_data=f"yt|{cache_id}|audio")
         ],
-        [InlineKeyboardButton("❌ Cancel", callback_data=f"yt_dl|{cache_id}|cancel")],
-    ]
-    return InlineKeyboardMarkup(buttons)
+        [
+            InlineKeyboardButton("🎥 360p", callback_data=f"yt|{cache_id}|360p"),
+            InlineKeyboardButton("🎥 720p", callback_data=f"yt|{cache_id}|720p"),
+        ],
+        [
+            InlineKeyboardButton("❌ Cancel", callback_data=f"yt|{cache_id}|cancel")
+        ]
+    ])
 
 
-def get_format_selector(choice: str) -> str:
+def get_format(choice: str) -> str:
     if choice == "audio":
         return "bestaudio/best"
-    elif choice == "360p":
-        return "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]"
-    elif choice == "720p":
-        return "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]"
+    if choice == "360p":
+        return "bestvideo[height<=360][ext=mp4]+bestaudio/best"
+    if choice == "720p":
+        return "bestvideo[height<=720][ext=mp4]+bestaudio/best"
     return "best"
 
 
-def pick_estimated_size(info: Dict[str, Any]) -> Optional[int]:
-    size = info.get("filesize") or info.get("filesize_approx")
-    if size:
-        return int(size)
+def estimate_size(info: Dict[str, Any]) -> Optional[int]:
+    if info.get("filesize"):
+        return int(info["filesize"])
+    if info.get("filesize_approx"):
+        return int(info["filesize_approx"])
+
     for f in info.get("formats", []):
         if f.get("filesize"):
             return int(f["filesize"])
         if f.get("filesize_approx"):
             return int(f["filesize_approx"])
+
     return None
 
 
 # =====================
-# MESSAGE HANDLER
+# MAIN HANDLER
 # =====================
 
 @Client.on_message(filters.regex(r"(youtube\.com|youtu\.be)") & ~filters.edited)
-async def youtube_downloader(client: Client, message: Message):
+async def youtube_start(client: Client, message: Message):
+
     if Config.CHANNEL:
-        fsub = await handle_force_subscribe(client, message)
-        if fsub == 400:
+        if await handle_force_subscribe(client, message) == 400:
             return
 
     url = message.text.strip()
-    msg = await message.reply_text("🔍 Video info fetch ho rahi hai...")
+    msg = await message.reply("🔍 Fetching video details...")
 
     try:
         info = get_yt_info(url)
     except:
-        await msg.edit("❌ Video info nahi mil paayi. Thodi der baad try karo.")
-        return
+        return await msg.edit("❌ Video details fetch nahi ho paayi.")
 
+    # Duration check
     duration = info.get("duration", 0)
     if duration > MAX_DURATION_SECONDS:
-        await msg.edit("❌ Ye video 1 ghante se lambi hai. Chhoti video bhejo.")
-        return
+        return await msg.edit("❌ Ye video 1 hour se badi hai. Chhoti video bhejo.")
 
     title = info.get("title") or "YouTube Video"
     thumb = info.get("thumbnail")
     duration_str = info.get("duration_string", "")
 
     cache_id = str(uuid.uuid4())
-    YT_CACHE[cache_id] = {"url": url, "info": info, "user": message.from_user.id}
+
+    YT_CACHE[cache_id] = {
+        "url": url,
+        "info": info,
+        "uid": message.from_user.id
+    }
 
     caption = f"📺 **{title}**\n⏱ Duration: `{duration_str}`\n\n👇 Format select karo:"
 
     if thumb:
-        thumb_path = await fix_thumb(thumb, title)
+        th = await fix_thumb(thumb, title)
         await msg.delete()
-        await message.reply_photo(thumb_path, caption=caption, reply_markup=build_keyboard(cache_id))
-        os.remove(thumb_path)
+        await message.reply_photo(th, caption=caption, reply_markup=build_keyboard(cache_id))
+        os.remove(th)
     else:
         await msg.edit(caption, reply_markup=build_keyboard(cache_id))
 
@@ -135,18 +146,17 @@ async def youtube_downloader(client: Client, message: Message):
 # CALLBACK HANDLER
 # =====================
 
-@Client.on_callback_query(filters.regex(r"^yt_dl\|"))
-async def yt_cb(client: Client, query: CallbackQuery):
+@Client.on_callback_query(filters.regex(r"^yt\|"))
+async def youtube_download(client: Client, query: CallbackQuery):
+
     _, cache_id, choice = query.data.split("|")
 
     data = YT_CACHE.get(cache_id)
     if not data:
-        await query.answer("⏰ Request expire ho gayi.", show_alert=True)
-        return
+        return await query.answer("⏰ Request expire ho gayi.", show_alert=True)
 
-    if query.from_user.id != data["user"]:
-        await query.answer("Sirf jisne link bheja tha, wo hi use kar sakta hai.", show_alert=True)
-        return
+    if query.from_user.id != data["uid"]:
+        return await query.answer("Ye buttons sirf original user ke liye hain.", show_alert=True)
 
     if choice == "cancel":
         await query.message.edit_caption("❌ Cancelled.")
@@ -156,62 +166,59 @@ async def yt_cb(client: Client, query: CallbackQuery):
     url = data["url"]
     info = data["info"]
 
-    fmt = get_format_selector(choice)
+    fmt = get_format(choice)
     await query.answer()
+    await query.message.edit_caption(f"📥 `{choice}` selected.\n⏳ Downloading...")
 
-    await query.message.edit_caption(f"📥 `{choice}` selected.\n🔄 Downloading...")
-
-    est = pick_estimated_size(info)
+    est = estimate_size(info)
     if est and est > TELEGRAM_MAX_BYTES:
-        await query.message.edit_caption("❌ File size 2GB se zyada hai.")
-        return
+        return await query.message.edit_caption("❌ File size 2GB se zyada hai.")
 
     temp = str(uuid.uuid4())
-    out = f"downloads/{temp}.%(ext)s"
+    output = f"downloads/{temp}.%(ext)s"
 
     ydl_opts = {
         "format": fmt,
-        "outtmpl": out,
+        "outtmpl": output,
         "quiet": True,
         "merge_output_format": "mp4" if choice != "audio" else "mp3",
         "postprocessors": [{
             "key": "FFmpegExtractAudio",
             "preferredcodec": "mp3",
-            "preferredquality": "192",
-        }] if choice == "audio" else [],
+            "preferredquality": "192"
+        }] if choice == "audio" else []
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            dlinfo = ydl.extract_info(url, download=True)
-            file = ydl.prepare_filename(dlinfo)
+            info2 = ydl.extract_info(url, download=True)
+            file_path = ydl.prepare_filename(info2)
 
         if choice == "audio":
-            base, _ = os.path.splitext(file)
+            base = file_path.rsplit(".", 1)[0]
             if os.path.exists(base + ".mp3"):
-                file = base + ".mp3"
+                file_path = base + ".mp3"
 
-        size = os.path.getsize(file)
+        size = os.path.getsize(file_path)
         if size > TELEGRAM_MAX_BYTES:
-            await query.message.edit_caption("❌ Final file 2GB se badi hai.")
-            return
+            return await query.message.edit_caption("❌ Final file 2GB se badi hai.")
 
-        title = dlinfo.get("title", "YouTube Video")
-        cap = f"✅ **{title}**\nCompleted."
+        title = info2.get("title", "YouTube")
+        caption = f"✅ **{title}**\nSize: `{humanbytes(size)}`"
 
         if choice == "audio":
-            await query.message.reply_audio(file, caption=cap)
+            await query.message.reply_audio(file_path, caption=caption)
         else:
-            await query.message.reply_video(file, caption=cap, supports_streaming=True)
+            await query.message.reply_video(file_path, caption=caption, supports_streaming=True)
 
-        await query.message.edit_caption(f"✅ Done! Size: `{humanbytes(size)}`")
+        await query.message.edit_caption("✅ Completed ✔")
 
     except Exception as e:
-        await query.message.edit_caption("❌ Error aaya. Dusra link try karo.")
         print(e)
+        await query.message.edit_caption("❌ Download me error aaya. Try again.")
 
     try:
-        os.remove(file)
+        os.remove(file_path)
     except:
         pass
 
