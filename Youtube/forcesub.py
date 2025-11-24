@@ -44,11 +44,7 @@ async def handle_force_subscribe(client: Client, message: Message):
         return 200
 
     user_id = message.from_user.id
-    chat_id = Config.CHANNEL
-
-    # CHANNEL env me tum ya to:
-    #  -100XXXXXXXXXX (ID)   ya
-    #  @Ethicals_hacking (username) rakh sakte ho
+    chat_id = Config.CHANNEL  # can be @username or -100id
 
     try:
         member = await client.get_chat_member(chat_id, user_id)
@@ -58,34 +54,34 @@ async def handle_force_subscribe(client: Client, message: Message):
             await message.reply_text("❌ Aap is channel se banned ho. Bot use nahi kar sakte.")
             return 400
 
-        # Agar already member / admin / creator hai -> allowed
+        # Already member → allowed
         return 200
 
     except UserNotParticipant:
         # User channel me join nahi hai
-        join_button = InlineKeyboardMarkup(
+        channel_username = str(chat_id).replace("-100", "").replace("@", "")
+        join_link = f"https://t.me/{channel_username}"
+
+        buttons = InlineKeyboardMarkup(
             [
-                [
-                    InlineKeyboardButton(
-                        "📢 JOIN UPDATE CHANNEL",
-                        url=f"https://t.me/{str(chat_id).replace('-100', '').replace('@', '')}"
-                    )
-                ],
-                [
-                    InlineKeyboardButton("✅ JOIN KAR LIYA", callback_data="check_fsub")
-                ]
+                [InlineKeyboardButton("📢 JOIN UPDATE CHANNEL", url=join_link)],
+                [InlineKeyboardButton("✅ JOIN KAR LIYA", callback_data="check_fsub")]
             ]
         )
 
         await message.reply_text(
-            "⚠️ **Pehle hamara update channel join karo**\n\n"
+            "⚠️ **Pehle hamara update channel join karo.**\n\n"
             "📢 `@Ethicals_hacking`\n\n"
-            "Phir dobara command ya link bhejna.",
-            reply_markup=join_button
+            "Phir dubara YouTube link ya command bhejna.",
+            reply_markup=buttons
         )
         return 400
 
     except Exception as e:
-        # Agar koi unexpected error aaye, to fsub skip kar dete hain
+        # Yaha koi bhi unexpected error ho to safe side pe BLOCK kar dete hain
         print(f"[ForceSub Error] {e}")
-        return 200
+        await message.reply_text(
+            "⚠️ Force-subscribe system me kuch error aa gaya.\n"
+            "Developer ko config check karne do."
+        )
+        return 400
