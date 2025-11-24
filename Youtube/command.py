@@ -1,91 +1,117 @@
-# ©️ TUSHAR DAVERA | @tushardavera | NT_BOT_CHANNEL | LISA-KOREA/YouTube-Video-Download-Bot
+# ============================================================
+#   Module: Start / About / Help Handlers
+#   Developer: Tushar Davera (@tushardavera)
+#   Description:
+#       /start, /about, /help commands + cancel button
+# ============================================================
 
-# [⚠️ Do not change this repo link ⚠️] :- https://github.com/LISA-KOREA/YouTube-Video-Download-Bot
-
-
-
-from pyrogram import Client, filters
 import datetime
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ForceReply
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 from Youtube.config import Config
 from Youtube.script import Translation
 from Youtube.forcesub import handle_force_subscribe
 
+# =========================
+# Time-based greeting
+# =========================
 
-#########################
-
-# Calculate current time greeting
-currentTime = datetime.datetime.now()
-if currentTime.hour < 12:
+current_time = datetime.datetime.now()
+if current_time.hour < 12:
     wish = "Good morning 🌞"
-elif 12 <= currentTime.hour < 18:
+elif 12 <= current_time.hour < 18:
     wish = "Good afternoon 🌤️"
 else:
     wish = "Good evening 🌝"
 
 
+# =========================
+# Cancel button handler
+# =========================
 
-
-########################🎊 Lisa | NT BOTS 🎊######################################################
 @Client.on_callback_query(filters.regex("cancel"))
 async def cancel(client, callback_query):
-    await callback_query.message.delete()
+    try:
+        await callback_query.message.delete()
+    except Exception:
+        pass
 
-# About command handler
+
+# =========================
+# /about command
+# =========================
+
 @Client.on_message(filters.private & filters.command("about"))
 async def about(client, message):
     if Config.CHANNEL:
-      fsub = await handle_force_subscribe(client, message)
-      if fsub == 400:
-        return
+        fsub = await handle_force_subscribe(client, message)
+        if fsub == 400:
+            return
+
     await message.reply_text(
         text=Translation.ABOUT_TXT,
         disable_web_page_preview=True,
         reply_markup=InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton('⛔️ Close', callback_data='cancel')]
-        ]
-    ))
+            [
+                [InlineKeyboardButton('⛔️ Close', callback_data='cancel')]
+            ]
+        )
+    )
 
 
-# Start command handler
+# =========================
+# /start command
+# =========================
+
 @Client.on_message(filters.private & filters.command("start"))
 async def start(client, message):
     if Config.CHANNEL:
-      fsub = await handle_force_subscribe(client, message)
-      if fsub == 400:
-        return
-    #user = message.from_user
+        fsub = await handle_force_subscribe(client, message)
+        if fsub == 400:
+            return
+
     await message.reply_text(
         text=Translation.START_TEXT.format(message.from_user.first_name, wish),
         reply_markup=InlineKeyboardMarkup(
-        [
             [
-                InlineKeyboardButton('📍 Update Channel', url='https://t.me/Ethicals_hacking'),
-            ],
-            [
-                InlineKeyboardButton('👩‍💻 Developer', url='https://t.me/tushardavera'),
-                InlineKeyboardButton('👥 Support Group', url='https://t.me/Ethical_hacking_group'),
-            ],
-            [
-                InlineKeyboardButton('⛔️ Close', callback_data='cancel')
+                [
+                    InlineKeyboardButton('📍 Update Channel', url='https://t.me/Ethicals_hacking'),
+                ],
+                [
+                    InlineKeyboardButton('👩‍💻 Developer', url='https://t.me/tushardavera'),
+                    InlineKeyboardButton('👥 Support Group', url='https://t.me/Ethical_hacking_group'),
+                ],
+                [
+                    InlineKeyboardButton('⛔️ Close', callback_data='cancel')
+                ]
             ]
-        ]
-    ))
+        )
+    )
 
-# Help command handler
-@Client.on_message(filters.command("help"))
-async def help(client, message):
+
+# =========================
+# /help command
+# =========================
+
+@Client.on_message(filters.private & filters.command("help"))
+async def help_cmd(client, message):
+    if Config.CHANNEL:
+        fsub = await handle_force_subscribe(client, message)
+        if fsub == 400:
+            return
+
     help_text = """
-Welcome to the YouTube Video Uploader Bot!
+<b>How to Use This Bot?</b>
 
-To upload a YouTube video, simply send me the YouTube link.
+1️⃣ Send me any YouTube link  
+2️⃣ I will show download options  
+3️⃣ Select Audio/Video — done! 🎉
 
-Enjoy using the bot!
+Fast, simple and clean.
 
-©️ Channel : @Ethicals_hacking
+©️ Channel : @Ethicals_hacking  
+👨‍💻 Developer : @tushardavera
     """
+
     await message.reply_text(help_text)
-
-
-########################🎊 Lisa | NT BOTS 🎊######################################################
