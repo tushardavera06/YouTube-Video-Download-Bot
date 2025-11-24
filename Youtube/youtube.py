@@ -10,216 +10,173 @@
 # ============================================================
 
 import os
-import uuid
-import logging
-from typing import Dict, Any, Optional
-
 import yt_dlp
+import logging
+import uuid
+import aiohttp
+import aiofiles
 from pyrogram import Client, filters
-from pyrogram.types import (
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-    Message,
-    CallbackQuery,
-)
-
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from Youtube.config import Config
 from Youtube.fix_thumb import fix_thumb
 from Youtube.forcesub import handle_force_subscribe, humanbytes
 
-# =====================
-# GLOBAL SETTINGS
-# =====================
 
-YT_CACHE: Dict[str, Dict[str, Any]] = {}
-TELEGRAM_MAX_BYTES = 1_900_000_000
-MAX_DURATION_SECONDS = 60 * 60
-
-DOWNLOAD_DIR = "downloads"
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-LOG = logging.getLogger(__name__)
+YT_CACHE = {}
 
 
-# =====================
-# HELPERS
-# =====================
-
-def get_yt_info(url: str) -> Dict[str, Any]:
-    ydl_opts = {
-        "quiet": True,
-        "skip_download": True,
-        "nocheckcertificate": True
-    }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        return ydl.extract_info(url, download=False)
-
-
-def build_keyboard(cache_id: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🎵 Audio (Best)", callback_data=f"yt|{cache_id}|audio")
-        ],
-        [
-            InlineKeyboardButton("🎥 360p", callback_data=f"yt|{cache_id}|360p"),
-            InlineKeyboardButton("🎥 720p", callback_data=f"yt|{cache_id}|720p"),
-        ],
-        [
-            InlineKeyboardButton("❌ Cancel", callback_data=f"yt|{cache_id}|cancel")
-        ]
-    ])
-
-
-def get_format(choice: str) -> str:
-    if choice == "audio":
-        return "bestaudio/best"
-    if choice == "360p":
-        return "bestvideo[height<=360][ext=mp4]+bestaudio/best"
-    if choice == "720p":
-        return "bestvideo[height<=720][ext=mp4]+bestaudio/best"
-    return "best"
-
-
-def estimate_size(info: Dict[str, Any]) -> Optional[int]:
-    if info.get("filesize"):
-        return int(info["filesize"])
-    if info.get("filesize_approx"):
-        return int(info["filesize_approx"])
-
-    for f in info.get("formats", []):
-        if f.get("filesize"):
-            return int(f["filesize"])
-        if f.get("filesize_approx"):
-            return int(f["filesize_approx"])
-
-    return None
-
-
-# =====================
-# MAIN HANDLER
-# =====================
-
-@Client.on_message(filters.regex(r"(youtube\.com|youtu\.be)") & ~filters.edited)
-async def youtube_start(client: Client, message: Message):
-
+@Client.on_message(filters.regex(r'^(http(s)?://)?(www\.)?(youtube\.com|youtu\.be)/.+'))
+async def youtube_downloader(client, message):
     if Config.CHANNEL:
-        if await handle_force_subscribe(client, message) == 400:
+        fsub = await handle_force_subscribe(client, message)
+        if fsub == 400:
             return
 
     url = message.text.strip()
-    msg = await message.reply("🔍 Fetching video details...")
+    processing_msg = await message.reply_text("🔍 **Fetching available formats...**")
 
-    try:
-        info = get_yt_info(url)
-    except:
-        return await msg.edit("❌ Video details fetch nahi ho paayi.")
-
-    # Duration check
-    duration = info.get("duration", 0)
-    if duration > MAX_DURATION_SECONDS:
-        return await msg.edit("❌ Ye video 1 hour se badi hai. Chhoti video bhejo.")
-
-    title = info.get("title") or "YouTube Video"
-    thumb = info.get("thumbnail")
-    duration_str = info.get("duration_string", "")
-
-    cache_id = str(uuid.uuid4())
-
-    YT_CACHE[cache_id] = {
-        "url": url,
-        "info": info,
-        "uid": message.from_user.id
-    }
-
-    caption = f"📺 **{title}**\n⏱ Duration: `{duration_str}`\n\n👇 Format select karo:"
-
-    if thumb:
-        th = await fix_thumb(thumb, title)
-        await msg.delete()
-        await message.reply_photo(th, caption=caption, reply_markup=build_keyboard(cache_id))
-        os.remove(th)
-    else:
-        await msg.edit(caption, reply_markup=build_keyboard(cache_id))
-
-
-# =====================
-# CALLBACK HANDLER
-# =====================
-
-@Client.on_callback_query(filters.regex(r"^yt\|"))
-async def youtube_download(client: Client, query: CallbackQuery):
-
-    _, cache_id, choice = query.data.split("|")
-
-    data = YT_CACHE.get(cache_id)
-    if not data:
-        return await query.answer("⏰ Request expire ho gayi.", show_alert=True)
-
-    if query.from_user.id != data["uid"]:
-        return await query.answer("Ye buttons sirf original user ke liye hain.", show_alert=True)
-
-    if choice == "cancel":
-        await query.message.edit_caption("❌ Cancelled.")
-        YT_CACHE.pop(cache_id, None)
-        return
-
-    url = data["url"]
-    info = data["info"]
-
-    fmt = get_format(choice)
-    await query.answer()
-    await query.message.edit_caption(f"📥 `{choice}` selected.\n⏳ Downloading...")
-
-    est = estimate_size(info)
-    if est and est > TELEGRAM_MAX_BYTES:
-        return await query.message.edit_caption("❌ File size 2GB se zyada hai.")
-
-    temp = str(uuid.uuid4())
-    output = f"downloads/{temp}.%(ext)s"
-
-    ydl_opts = {
-        "format": fmt,
-        "outtmpl": output,
-        "quiet": True,
-        "merge_output_format": "mp4" if choice != "audio" else "mp3",
-        "postprocessors": [{
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp3",
-            "preferredquality": "192"
-        }] if choice == "audio" else []
-    }
+    ydl_opts = {"quiet": True, "cookiefile": "cookies.txt"}
+    buttons = []
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info2 = ydl.extract_info(url, download=True)
-            file_path = ydl.prepare_filename(info2)
+            info = ydl.extract_info(url, download=False)
+            formats = info.get("formats", [])
+            duration = info.get("duration")
+            title = info.get("title", "YouTube Video")
 
-        if choice == "audio":
-            base = file_path.rsplit(".", 1)[0]
-            if os.path.exists(base + ".mp3"):
-                file_path = base + ".mp3"
+            vid_key = str(uuid.uuid4())[:8]
+            YT_CACHE[vid_key] = url
 
-        size = os.path.getsize(file_path)
-        if size > TELEGRAM_MAX_BYTES:
-            return await query.message.edit_caption("❌ Final file 2GB se badi hai.")
+            # 👉 Yahi part change kiya gaya hai (buttons ka text)
+            for f in formats:
+                fmt_id = f.get("format_id")
+                ext = f.get("ext")
+                height = f.get("height")
 
-        title = info2.get("title", "YouTube")
-        caption = f"✅ **{title}**\nSize: `{humanbytes(size)}`"
+                # Sirf wahi formats jisme video + audio dono ho
+                acodec = f.get("acodec")
+                vcodec = f.get("vcodec")
+                if (not fmt_id) or (not acodec) or acodec == "none" or (not vcodec) or vcodec == "none":
+                    continue
 
-        if choice == "audio":
-            await query.message.reply_audio(file_path, caption=caption)
-        else:
-            await query.message.reply_video(file_path, caption=caption, supports_streaming=True)
+                # 720p / 480p / 360p...
+                resolution = f"{height}p" if height else "Unknown"
 
-        await query.message.edit_caption("✅ Completed ✔")
+                # Final button text -> 91 - 720p - mp4
+                text = f"{fmt_id} - {resolution} - {ext}"
+
+                cb = f"ytdl|{vid_key}|{fmt_id}|{ext}|video"
+
+                if len(cb.encode()) <= 64:
+                    buttons.append([InlineKeyboardButton(text, callback_data=cb)])
+
+            # Audio only option
+            if duration:
+                buttons.append([
+                    InlineKeyboardButton("🎵 Audio MP3", callback_data=f"ytdl|{vid_key}|bestaudio|mp3|audio")
+                ])
+
+            await message.reply_text(
+                f"**✅ Available formats for:**\n`{title}`",
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+
+            await processing_msg.delete()
 
     except Exception as e:
-        print(e)
-        await query.message.edit_caption("❌ Download me error aaya. Try again.")
+        logging.exception("Error fetching formats:")
+        await processing_msg.edit_text(f"❌ Error: `{e}`")
 
+
+@Client.on_callback_query(filters.regex(r"^ytdl\|"))
+async def handle_download(client, cq):
     try:
-        os.remove(file_path)
-    except:
-        pass
+        _, vid_key, fmt_id, ext, mode = cq.data.split("|")
+        url = YT_CACHE.get(vid_key)
+        if not url:
+            await cq.message.edit_text("⚠️ Session expired. Please resend link.")
+            return
 
-    YT_CACHE.pop(cache_id, None)
+        await cq.message.edit_text("⬇️ **Downloading...**")
+
+        os.makedirs("downloads", exist_ok=True)
+        output = f"downloads/{vid_key}.%(ext)s"
+
+        if mode == "audio":
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "outtmpl": output,
+                "quiet": True,
+                "cookiefile": "cookies.txt",
+                "postprocessors": [{
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "192",
+                }],
+            }
+        else:
+            # Sirf selected format download hoga (video+audio)
+            ydl_opts = {
+                "format": fmt_id,
+                "outtmpl": output,
+                "quiet": True,
+                "cookiefile": "cookies.txt",
+            }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            title = info.get("title", "YouTube Video")
+            duration = info.get("duration", 0)
+            width = info.get("width")
+            height = info.get("height")
+            thumb_url = info.get("thumbnail")
+            filesize = info.get("filesize") or info.get("filesize_approx")
+            file_size_text = humanbytes(filesize) if filesize else "Unknown"
+
+        # Audio ke liye mp3, warna selected ext
+        file_path = f"downloads/{vid_key}.{'mp3' if mode == 'audio' else ext}"
+
+        thumb_path = None
+        if thumb_url:
+            async with aiohttp.ClientSession() as s:
+                async with s.get(thumb_url) as r:
+                    if r.status == 200:
+                        thumb_path = f"{vid_key}.jpg"
+                        async with aiofiles.open(thumb_path, "wb") as f:
+                            await f.write(await r.read())
+
+        width, height, thumb_path = await fix_thumb(thumb_path)
+
+        await cq.message.edit_text("📤 **Uploading...**")
+
+        if mode == "audio":
+            await client.send_audio(
+                chat_id=cq.message.chat.id,
+                audio=file_path,
+                caption=f"🎵 **{title}**\n📦 Size: `{file_size_text}`",
+                duration=duration,
+                thumb=thumb_path if thumb_path and os.path.exists(thumb_path) else None,
+            )
+        else:
+            await client.send_video(
+                chat_id=cq.message.chat.id,
+                video=file_path,
+                caption=f"🎬 **{title}**\n📦 Size: `{file_size_text}`",
+                width=width,
+                height=height,
+                duration=duration,
+                thumb=thumb_path if thumb_path and os.path.exists(thumb_path) else None,
+                supports_streaming=True
+            )
+
+        await cq.message.edit_text("✅ **Successfully Uploaded!**")
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        if thumb_path and os.path.exists(thumb_path):
+            os.remove(thumb_path)
+
+    except Exception as e:
+        logging.exception("Download error:")
+        await cq.message.edit_text(f"❌ Error: `{e}`")
