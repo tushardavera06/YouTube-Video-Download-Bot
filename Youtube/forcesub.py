@@ -1,65 +1,91 @@
-import asyncio
-from pyrogram import Client, enums
+# ============================================================
+#   Module: Force Subscribe
+#   Developer: Tushar Davera (@tushardavera)
+#   Description:
+#       Checks if user has joined the required channel.
+#       If not, asks user to join and stops further actions.
+# ============================================================
+
+from pyrogram import Client
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
+from pyrogram.errors import UserNotParticipant
+
 from Youtube.config import Config
-from pyrogram.errors import FloodWait, UserNotParticipant
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-
-
-########################🎊 Lisa | NT BOTS 🎊######################################################
-
-async def handle_force_subscribe(bot, message):
-    try:
-        invite_link = await bot.create_chat_invite_link(int(Config.CHANNEL))
-    except FloodWait as e:
-        await asyncio.sleep(e.x)
-        return 400
-    try:
-        user = await bot.get_chat_member(int(Config.CHANNEL), message.from_user.id)
-        if user.status == "kicked":
-            await bot.send_message(
-                chat_id=message.from_user.id,
-                text="Sorry Sir, You are Banned. Contact My [Support Group](https://t.me/NT_BOTS_SUPPORT).",
-                disable_web_page_preview=True,
-            )
-            return 400
-    except UserNotParticipant:
-        await bot.send_message(
-            chat_id=message.from_user.id,
-            text="Pʟᴇᴀsᴇ Jᴏɪɴ Mʏ Uᴘᴅᴀᴛᴇs Cʜᴀɴɴᴇʟ Tᴏ Usᴇ Mᴇ!\n\nDᴜᴇ ᴛᴏ Oᴠᴇʀʟᴏᴀᴅ, Oɴʟʏ Cʜᴀɴɴᴇʟ Sᴜʙsᴄʀɪʙᴇʀs Cᴀɴ Usᴇ Mᴇ!",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton("🤖 Pʟᴇᴀsᴇ Jᴏɪɴ Mʏ Cʜᴀɴɴᴇʟ 🤖", url=invite_link.invite_link)
-                    ],
-                ]
-            ),
-            
-        )
-        return 400
-    except Exception:
-        await bot.send_message(
-            chat_id=message.from_user.id,
-            text="Something Went Wrong. Contact My [Support Group](https://t.me/NT_BOTS_SUPPORT).",
-            disable_web_page_preview=True,
-        )
-        return 400
-
-
 
 
 def humanbytes(size):
+    """
+    Converts bytes to human-readable format.
+    Used for showing file sizes like 10 MB, 1.5 GB, etc.
+    """
     if not size:
         return "0 B"
+
     power = 2 ** 10
-    n = 0
-    Dic_powerN = {0: '', 1: 'Ki', 2: 'Mi', 3: 'Gi', 4: 'Ti'}
+    raised_to_pow = 0
+    dict_power_n = {0: 'B', 1: 'KB', 2: 'MB', 3: 'GB', 4: 'TB'}
+
     while size > power:
         size /= power
-        n += 1
-    return f"{round(size, 2)} {Dic_powerN[n]}B"
+        raised_to_pow += 1
+    return f"{round(size, 2)} {dict_power_n[raised_to_pow]}"
 
 
+async def handle_force_subscribe(client: Client, message: Message):
+    """
+    Checks if the user has joined the channel defined in Config.CHANNEL.
+    Returns:
+        200 -> user allowed
+        400 -> user must join, action stopped
+    """
 
+    # Agar CHANNEL set hi nahi hai to fsub off samjho
+    if not Config.CHANNEL:
+        return 200
 
+    user_id = message.from_user.id
+    chat_id = Config.CHANNEL
 
-########################🎊 Lisa | NT BOTS 🎊######################################################
+    # CHANNEL env me tum ya to:
+    #  -100XXXXXXXXXX (ID)   ya
+    #  @Ethicals_hacking (username) rakh sakte ho
+
+    try:
+        member = await client.get_chat_member(chat_id, user_id)
+
+        # Agar band / restricted ho
+        if member.status in ("kicked", "banned"):
+            await message.reply_text("❌ Aap is channel se banned ho. Bot use nahi kar sakte.")
+            return 400
+
+        # Agar already member / admin / creator hai -> allowed
+        return 200
+
+    except UserNotParticipant:
+        # User channel me join nahi hai
+        join_button = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "📢 JOIN UPDATE CHANNEL",
+                        url=f"https://t.me/{str(chat_id).replace('-100', '').replace('@', '')}"
+                    )
+                ],
+                [
+                    InlineKeyboardButton("✅ JOIN KAR LIYA", callback_data="check_fsub")
+                ]
+            ]
+        )
+
+        await message.reply_text(
+            "⚠️ **Pehle hamara update channel join karo**\n\n"
+            "📢 `@Ethicals_hacking`\n\n"
+            "Phir dobara command ya link bhejna.",
+            reply_markup=join_button
+        )
+        return 400
+
+    except Exception as e:
+        # Agar koi unexpected error aaye, to fsub skip kar dete hain
+        print(f"[ForceSub Error] {e}")
+        return 200
