@@ -51,9 +51,9 @@ def _get_channels():
     """
     CHANNEL env se list banata hai.
     Support:
-        " -100id "       -> one channel
-        "@chan1 @chan2"  -> multiple
-        "-100id,@chan2"  -> comma / space dono
+        "-100id"           -> one channel
+        "@chan1 @chan2"    -> multiple
+        "-100id,@chan2"    -> comma / space dono
     """
     raw = str(Config.CHANNEL or "").replace(",", " ").split()
     return [c.strip() for c in raw if c.strip()]
@@ -139,7 +139,9 @@ async def handle_force_subscribe(client: Client, message: Message) -> int:
         )
 
     # Re-check button
-    buttons.append([InlineKeyboardButton("✅ JOIN KAR LIYA", callback_data="check_fsub")])
+    buttons.append(
+        [InlineKeyboardButton("✅ JOIN KAR LIYA", callback_data="check_fsub")]
+    )
 
     # Message text
     text_lines = ["⚠️ **Pehle hamare channel(s) join karo:**", ""]
