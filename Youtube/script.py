@@ -1,45 +1,48 @@
+# ============================================================
+#   Script / Text Module
+#   Developer: Tushar Davera (@tushardavera)
+#   Branding: Spidy 🕷 Gaming
+# ============================================================
+
 class Translation(object):
 
-    START_TEXT = """
-👋 Hello **{0}**,  
-**{1}**
+    # Start message
+    START_TEXT = (
+        "👋 Hello **{0}**, \n"
+        "**{1}**\n\n"
+        "🎬 Send any **YouTube link**\n"
+        "and I will give you high-quality **Video / Audio** download options.\n\n"
+        "Fast ⚡ | Clean UI | High Quality 🎧🎬"
+    )
 
-🎬 Send me any YouTube link  
-I will give you options to download **Audio / Video** instantly.
-
-Fast ⚡ | Clean UI | High Quality 🎧🎥
-"""
-
+    # About message
     ABOUT_TXT = """
-╭────────────────────⍟
-│ 📛 **Bot Name:** YouTube Downloader Bot  
-│ ⚙️ **Framework:** Pyrogram  
-│ 💻 **Language:** Python  
-│ 🛰 **Hosting:** Railway.app  
-│ 👨‍💻 **Developer:** [Tushar Davera](https://t.me/tushardavera)  
-│ 📢 **Updates:** [Ethicals Hacking](https://t.me/Ethicals_hacking)  
-│ 👥 **Support:** [Ethical Hacking Group](https://t.me/Ethical_hacking_group)
-╰────────────────────⍟
+╭───────────────⍟
+├📛 **Bot Name:** YouTube Downloader Bot
+├⚙️ **Framework:** Pyrogram / PyroFork
+├💻 **Language:** Python 3
+├📢 **Update Channel:** Spidy 🕷 Gaming
+├👥 **Support:** @tushardavera
+├💎 **Source Code:** Private (Maintained by Tushar)
+├👑 **Developer:** **Tushar Davera**
+╰───────────────⍟
 
-✨ **What I Can Do:**  
-• Download YouTube **Videos**  
-• Extract **High Quality Audio (MP3)**  
-• Auto Thumbnail Fix  
-• Clean and Fast Downloader  
+✨ **Description:**  
+Download YouTube **Videos + Audio (MP3)** in Telegram with high speed ⚡  
+Simple UI | Clean Design | Premium Quality
 """
 
+    # Help message
     HELP_TXT = """
-📘 **How to Use This Bot**
+**How to use this bot?**
 
-1️⃣ Just send me any **YouTube link**  
-2️⃣ I will show all available **formats**  
-3️⃣ Select Audio / Video  
-4️⃣ Your file will be uploaded ✔️
+1️⃣ Send any **YouTube link**  
+2️⃣ Bot will show you **Video qualities** + **MP3 option**  
+3️⃣ Select and wait — bot will upload the file directly to you  
 
-⚠️ Notes:
-• Very long videos (>1 hour) may fail  
-• Telegram limit is 2GB per file  
-• If any format fails, try another quality  
+⚠️ Note:  
+You must join the **Spidy 🕷 Gaming** update channel to use this bot  
+(Force Subscribe enabled)
 
-👨‍💻 Developer: @tushardavera  
+Enjoy 🎧🎬  
 """
