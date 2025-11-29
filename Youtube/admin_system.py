@@ -12,7 +12,7 @@ LOG_FILE = os.path.join(DATA_DIR, "logs.txt")
 BACKUP_DIR = os.path.join(DATA_DIR, "backups")
 
 # yaha apna Telegram user id daalo (owner)
-ADMINS = [@tushardavera]
+ADMINS = [2136583087]
 
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(BACKUP_DIR, exist_ok=True)
