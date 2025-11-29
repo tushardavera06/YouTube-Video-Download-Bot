@@ -86,6 +86,16 @@ def admin_filter(_, __, message):
 admin_only = filters.create(admin_filter)
 
 
+# ==== Callback ke liye admin filter ====
+def admin_cq_filter(_, __, cq):
+    if not getattr(cq, "from_user", None):
+        return False
+    return is_admin_id(cq.from_user.id)
+
+
+admin_cq_only = filters.create(admin_cq_filter)
+
+
 # ====== Users ======
 def load_users():
     return load_json(USERS_FILE, {})
@@ -182,6 +192,37 @@ def set_message(key: str, value: str):
     msgs = cfg.setdefault("messages", {})
     msgs[key] = value
     save_config(cfg)
+
+
+# ====== Admin panel keyboard helpers ======
+def get_admin_keyboard():
+    """Main admin panel buttons."""
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📊 Dashboard", callback_data="adm_dash"),
+            InlineKeyboardButton("👥 Users", callback_data="adm_users"),
+        ],
+        [
+            InlineKeyboardButton("🧾 Services", callback_data="adm_srv"),
+            InlineKeyboardButton("🛡 Security", callback_data="adm_sec"),
+        ],
+        [
+            InlineKeyboardButton("👑 Admins", callback_data="adm_admins"),
+            InlineKeyboardButton("📝 Messages", callback_data="adm_msg"),
+        ],
+        [
+            InlineKeyboardButton("🧰 Tools", callback_data="adm_tools"),
+            InlineKeyboardButton("📦 Backup", callback_data="adm_backup"),
+        ],
+    ])
+
+
+async def edit_admin_panel(message_obj, text: str):
+    """Helper to edit any admin panel view with main keyboard."""
+    await message_obj.edit_text(
+        text,
+        reply_markup=get_admin_keyboard()
+    )
 
 
 # ====== Admin commands ======
@@ -461,3 +502,243 @@ async def cmd_backupnow(client, message):
     zip_path = folder_name + ".zip"
     shutil.make_archive(folder_name, "zip", folder_name)
     await message.reply_document(zip_path, caption="📦 Backup: users, services, config, logs")
+
+
+# =========================
+#   ADMIN PANEL UI
+# =========================
+
+@Client.on_message(filters.command("admin") & admin_only)
+async def cmd_admin_panel(client, message):
+    text = (
+        "🛡 **ADMIN CONTROL SYSTEM – Tushar Davera**\n\n"
+        "Welcome Boss 👑\n"
+        "Neeche se jo manage karna hai, wo option choose karo:"
+    )
+    await message.reply(
+        text,
+        reply_markup=get_admin_keyboard()
+    )
+
+
+# 📊 Dashboard
+@Client.on_callback_query(filters.regex("^adm_dash$") & admin_cq_only)
+async def cb_adm_dash(client, cq):
+    users = load_users()
+    total = len(users)
+    today = datetime.now().strftime("%Y-%m-%d")
+    today_new = sum(1 for u in users.values() if u.get("joined_at", "").startswith(today))
+    total_downloads = sum(u.get("total_downloads", 0) for u in users.values())
+    total_mb = sum(u.get("total_mb", 0) for u in users.values())
+
+    text = (
+        "🛡 **ADMIN CONTROL SYSTEM – Dashboard**\n\n"
+        f"👥 Total Users: `{total}`\n"
+        f"🆕 New Today: `{today_new}`\n"
+        f"⬇️ Total Downloads: `{total_downloads}`\n"
+        f"📦 Total Data: `{total_mb}` MB\n\n"
+        "ℹ️ Detailed stats ke liye: `/stats` use karo."
+    )
+    await edit_admin_panel(cq.message, text)
+
+
+# 👥 Users
+@Client.on_callback_query(filters.regex("^adm_users$") & admin_cq_only)
+async def cb_adm_users(client, cq):
+    users = load_users()
+    total = len(users)
+    blocked = sum(1 for u in users.values() if u.get("blocked"))
+    total_downloads = sum(u.get("total_downloads", 0) for u in users.values())
+    total_mb = sum(u.get("total_mb", 0) for u in users.values())
+
+    text = (
+        "👥 **Users Panel**\n\n"
+        f"• Total Users: `{total}`\n"
+        f"• Blocked Users: `{blocked}`\n"
+        f"• Total Downloads: `{total_downloads}`\n"
+        f"• Total Data Used: `{total_mb}` MB\n\n"
+        "Useful commands:\n"
+        "• `/users` – summary\n"
+        "• `/user <id>` – ek user ki detail\n"
+        "• `/export_users` – sab users ka JSON file\n"
+        "• `/block <id>` / `/unblock <id>`"
+    )
+    await edit_admin_panel(cq.message, text)
+
+
+# 🧾 Services
+@Client.on_callback_query(filters.regex("^adm_srv$") & admin_cq_only)
+async def cb_adm_services(client, cq):
+    data = load_services()
+    if not data:
+        services_text = "❗ Abhi tak koi service add nahi hai."
+    else:
+        lines = []
+        for key, s in data.items():
+            lines.append(f"{s.get('emoji','•')} **{s.get('name','?')}** — `{key}`")
+        services_text = "\n".join(lines)
+
+    text = (
+        "🧾 **Services Panel**\n\n"
+        f"{services_text}\n\n"
+        "Add / remove commands:\n"
+        "• Add: `/addservice 🔍 | Name | key | note`\n"
+        "• List: `/services`\n"
+        "• Delete: `/delservice key`"
+    )
+    await edit_admin_panel(cq.message, text)
+
+
+# 🛡 Security
+@Client.on_callback_query(filters.regex("^adm_sec$") & admin_cq_only)
+async def cb_adm_sec(client, cq):
+    users = load_users()
+    blocked = sum(1 for u in users.values() if u.get("blocked"))
+    text = (
+        "🛡 **Security & Abuse Control**\n\n"
+        f"🚫 Blocked Users: `{blocked}`\n"
+        f"📏 Rate-limit: 10 requests / 60 sec per user (in-code)\n\n"
+        "Commands:\n"
+        "• `/block <id>` – user ko block karo\n"
+        "• `/unblock <id>` – unblock karo\n"
+        "• `/user <id>` – user ki history dekho\n"
+    )
+    await edit_admin_panel(cq.message, text)
+
+
+# 👑 Admins
+@Client.on_callback_query(filters.regex("^adm_admins$") & admin_cq_only)
+async def cb_adm_admins(client, cq):
+    cfg = get_config()
+    roles = cfg.get("roles", {})
+
+    text = "👑 **Admins & Mods**\n\n"
+    text += "Owner(s):\n"
+    for x in ADMINS:
+        text += f"• `{x}` (owner)\n"
+
+    if roles:
+        text += "\nRoles:\n"
+        for uid, r in roles.items():
+            text += f"• `{uid}` → {r}\n"
+
+    text += (
+        "\nCommands:\n"
+        "• `/addadmin <id>` – full admin\n"
+        "• `/addmod <id>` – limited mod\n"
+        "• `/removeadmin <id>` – role hatao\n"
+        "• `/admins` – yahi list message me"
+    )
+
+    await edit_admin_panel(cq.message, text)
+
+
+# 📝 Messages
+@Client.on_callback_query(filters.regex("^adm_msg$") & admin_cq_only)
+async def cb_adm_messages(client, cq):
+    cfg = get_config()
+    msgs = cfg.get("messages", {})
+    keys = list(msgs.keys())
+
+    if keys:
+        msg_list = "\n".join([f"• `{k}`" for k in keys])
+    else:
+        msg_list = "❗ Abhi koi custom message set nahi hai."
+
+    text = (
+        "📝 **Custom Messages Panel**\n\n"
+        f"Available keys:\n{msg_list}\n\n"
+        "Common usage:\n"
+        "• `/setmsg start | Your start text`\n"
+        "• `/setmsg block | Blocked user message`\n"
+        "• `/setmsg rate | Rate-limit message`\n"
+        "\nNote: `start` key ko `/start` command me use kar sakte ho."
+    )
+    await edit_admin_panel(cq.message, text)
+
+
+# 🧰 Tools
+@Client.on_callback_query(filters.regex("^adm_tools$") & admin_cq_only)
+async def cb_adm_tools(client, cq):
+    text = (
+        "🧰 **Debug & Tools**\n\n"
+        "Quick actions:\n"
+        "• Ping – bot latency check\n"
+        "• Server – basic server info\n"
+        "• Logs – last errors / logs file\n\n"
+        "Commands bhi use kar sakte ho:\n"
+        "• `/ping`\n"
+        "• `/server`\n"
+        "• `/logs`"
+    )
+
+    kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🏓 Ping", callback_data="adm_tool_ping"),
+            InlineKeyboardButton("🖥 Server", callback_data="adm_tool_server"),
+        ],
+        [
+            InlineKeyboardButton("📄 Logs", callback_data="adm_tool_logs"),
+            InlineKeyboardButton("⬅️ Main Menu", callback_data="adm_dash"),
+        ],
+    ])
+
+    await cq.message.edit_text(text, reply_markup=kb)
+
+
+@Client.on_callback_query(filters.regex("^adm_tool_ping$") & admin_cq_only)
+async def cb_adm_tool_ping(client, cq):
+    start = time.time()
+    m = await cq.message.reply("Pinging...")
+    ms = int((time.time() - start) * 1000)
+    await m.edit(f"🏓 Pong: `{ms} ms`")
+    await cq.answer("Ping executed.", show_alert=False)
+
+
+@Client.on_callback_query(filters.regex("^adm_tool_server$") & admin_cq_only)
+async def cb_adm_tool_server(client, cq):
+    total_users = len(load_users())
+    text = (
+        "🖥 **Server Info (basic)**\n\n"
+        f"• Tracked users: `{total_users}`\n"
+        f"• Time: `{now_str()}`\n"
+    )
+    await cq.message.reply(text)
+    await cq.answer("Server info sent.", show_alert=False)
+
+
+@Client.on_callback_query(filters.regex("^adm_tool_logs$") & admin_cq_only)
+async def cb_adm_tool_logs(client, cq):
+    if not os.path.exists(LOG_FILE):
+        await cq.message.reply("Log file nahi mili.")
+    else:
+        await cq.message.reply_document(LOG_FILE, caption="📄 logs.txt")
+    await cq.answer("Logs action done.", show_alert=False)
+
+
+# 📦 Backup
+@Client.on_callback_query(filters.regex("^adm_backup$") & admin_cq_only)
+async def cb_adm_backup(client, cq):
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder_name = os.path.join(BACKUP_DIR, f"backup_{ts}")
+    os.makedirs(folder_name, exist_ok=True)
+
+    for f in [USERS_FILE, SERVICES_FILE, CONFIG_FILE, LOG_FILE]:
+        if os.path.exists(f):
+            shutil.copy(f, folder_name)
+
+    zip_path = folder_name + ".zip"
+    shutil.make_archive(folder_name, "zip", folder_name)
+
+    await client.send_document(
+        chat_id=cq.message.chat.id,
+        document=zip_path,
+        caption="📦 Backup: users, services, config, logs"
+    )
+
+    text = (
+        "📦 **Backup Completed**\n\n"
+        "Latest backup zip abhi chat me send kar diya gaya hai.\n\n"
+        "Agar manually chahiye ho to `/backupnow` bhi use kar sakte ho."
+    )
+    await edit_admin_panel(cq.message, text)
