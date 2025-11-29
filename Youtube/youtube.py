@@ -24,6 +24,14 @@ from Youtube.config import Config
 from Youtube.fix_thumb import fix_thumb
 from Youtube.forcesub import handle_force_subscribe, humanbytes
 
+# >>> Admin Control System imports
+from .admin_system import (
+    register_user,
+    add_download_stat,
+    is_rate_limited,
+    is_blocked
+)
+
 # Simple in-memory cache
 YT_CACHE = {}
 
@@ -43,6 +51,23 @@ LOG = logging.getLogger(__name__)
 
 @Client.on_message(filters.regex(r'^(http(s)?://)?(www\.)?(youtube\.com|youtu\.be)/.+'))
 async def youtube_downloader(client: Client, message: Message):
+
+    # >>> Admin System: user register + block + rate-limit
+    user = message.from_user
+    if user:
+        # register / update user details
+        register_user(user)
+
+        # hard block check
+        if is_blocked(user.id):
+            await message.reply_text("🚫 You are blocked from using this bot.")
+            return
+
+        # simple rate-limit
+        if is_rate_limited(user.id):
+            await message.reply_text("⏳ Bahut zyada requests, thoda baad me try karo.")
+            return
+
     # Force subscribe check
     if Config.CHANNEL:
         fsub = await handle_force_subscribe(client, message)
@@ -123,6 +148,17 @@ async def youtube_downloader(client: Client, message: Message):
 
 @Client.on_callback_query(filters.regex(r"^ytdl\|"))
 async def handle_download(client: Client, cq: CallbackQuery):
+
+    # >>> Admin System: block + rate-limit on callback too
+    user = cq.from_user
+    if user:
+        if is_blocked(user.id):
+            await cq.answer("You are blocked from using this bot.", show_alert=True)
+            return
+        if is_rate_limited(user.id):
+            await cq.answer("Slow down, bahut zyada requests.", show_alert=True)
+            return
+
     try:
         _, vid_key, fmt_id, ext, mode = cq.data.split("|")
     except ValueError:
@@ -177,7 +213,7 @@ async def handle_download(client: Client, cq: CallbackQuery):
             file_path = os.path.join(DOWNLOAD_DIR, f"{vid_key}.{ext}")
 
         # If filesize missing, try local file size
-        if not filesize and os.path.exists(file_path):
+        if (not filesize) and os.path.exists(file_path):
             filesize = os.path.getsize(file_path)
 
         # Size safety check
@@ -239,6 +275,14 @@ async def handle_download(client: Client, cq: CallbackQuery):
             )
 
         await cq.message.edit_text("✅ **Successfully Uploaded!**")
+
+        # >>> Admin System: download stats update
+        try:
+            if file_path and os.path.exists(file_path) and user:
+                size_bytes = os.path.getsize(file_path)
+                add_download_stat(user.id, size_bytes)
+        except Exception:
+            pass
 
     except Exception as e:
         LOG.exception("Download error:")
