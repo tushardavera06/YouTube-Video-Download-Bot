@@ -1,0 +1,69 @@
+TUSHAR PERSONAL LICENSE v1.0
+Custom License for Modified YouTube Downloader Bot
+© 2025 Tushar Davera – All Rights Reserved
+
+
+1. OWNERSHIP
+All modifications, improvements, admin systems, UI changes, and
+structural enhancements made on top of the Apache-licensed base
+project are the exclusive intellectual property of:
+→  Tushar Davera (Author)
+
+The original project remains under Apache License 2.0.
+
+
+2. ALLOWED USAGE
+You are allowed to:
+
+• Use this bot personally for downloads.
+• Deploy your own instance for private or non-commercial use.
+• Modify the code for learning or personal improvement.
+• Run this project on hosting platforms (Railway, Render, VPS, etc.).
+
+
+3. RESTRICTIONS (NOT ALLOWED)
+You must NOT:
+
+• Sell this project or any modified version of it.
+• Offer paid versions, subscriptions, premium access, or reseller plans.
+• Remove the name of the modifier: "Modifications by © 2025 Tushar Davera".
+• Claim ownership of the modifications done by Tushar.
+• Redistribute a closed-source or paid version of this bot.
+• Rebrand the modified version as your own product.
+
+
+4. ATTRIBUTION
+Any public deployment OR redistribution MUST include:
+
+• “Modifications by © 2025 Tushar Davera”
+• A visible link to the license or copyright notice.
+
+
+5. WARRANTY
+This software is provided WITHOUT ANY WARRANTY.
+Usage is at your own risk.
+No liability is accepted for misuse, legal issues, or API abuse.
+
+
+6. NO COMMERCIAL USE
+You may NOT:
+
+• Use this software in any business or service that earns money.
+• Use it for affiliate systems, paid groups, data selling, etc.
+
+Commercial licensing is available ONLY via written permission
+from the author (Tushar Davera).
+
+
+7. COMPATIBILITY WITH ORIGINAL LICENSE
+This license applies ONLY to Tushar’s modifications.
+The underlying base project remains under Apache License 2.0.
+
+By using this modified project, you automatically agree to the
+terms of BOTH licenses.
+
+
+----------------------------------------------------
+If you want a commercial license or permission:
+Contact: Tushar Davera (Official Owner)
+----------------------------------------------------
