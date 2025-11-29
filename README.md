@@ -1,5 +1,5 @@
-#### YouTube Video Download Bot V3
-###### This A simple YouTube Video Download Telegram Bot
+#### YT Saver Pro – Telegram Bot
+###### A fast YouTube video & audio downloader bot by Tushar Davera
 
 
 ![logo](https://graph.org/file/754b7faa1308a13fc917f.jpg)
@@ -11,12 +11,10 @@
 This is a **public project** — if you fork it and push your bot’s credentials,  
 **everyone can see your secrets** (including your `BOT_TOKEN`, `API_HASH`, or `cookies.txt`).
 
-> Use **Heroku Config Vars**, `.env`, or private forks to keep your credentials safe.  
+> Use **Railway Config Vars**, `.env`, or private forks to keep your credentials safe.  
 
 
 
-# Donation
-<b><details><summary>Click To Open Donation detelis</summary>
 
 ## Support This Project
 
@@ -32,11 +30,11 @@ Maintaining and improving this project takes time and resources. If you find thi
 
 ### Payment Details
 
-- **UPI ID**: `jobinjustin2002-1@okaxis`  
-- **Bitcoin**: `1DPtf1xkq7aBriCBwDHNydSfzQT2PccFmj`  
-- **Tron (TRC20)**: `THPYzzchV2fssaw5RE4TxL8NxJpfctw46J`  
-- **Payeer**: `P1113797003`  
-- **PayPal**: [Click to Pay](https://www.paypal.me/lisajobin)
+- **UPI ID**: `text`  
+- **Bitcoin**: `text`  
+- **Tron (TRC20)**: `text`  
+- **Payeer**: `text`  
+- **PayPal**: [Click to Pay](https://www.paypal)
 
 ### Why Donate?
 
@@ -47,7 +45,7 @@ Maintaining and improving this project takes time and resources. If you find thi
 ### Contact
 
 If you have any questions or would like to sponsor this project in another way, feel free to reach out:  
-**[@JOBIN_JUSTIN](https://t.me/JOBIN_JUSTIN)** on Telegram.
+**[@tushardavera](https://t.me/tushardavera)** on Telegram.
 </b>
 </details>
 
@@ -77,19 +75,15 @@ If you have any questions or would like to sponsor this project in another way, 
 
 * `Cookies.txt` Add your youtube cookies
 
+
 ### Features
 
-- Download any youtube videos no age restriction 
-
-- Generate any youtube video thumbnail
-
-- Date and time added use `/date`
-
-- force-sub
-
-- Audio (MP3) download
-
-- Fix thumbnail
+- Download YouTube videos (no age restriction with cookies.txt)
+- Download high-quality MP3 audio
+- Automatic thumbnail fetch & fix
+- Force-subscribe support
+- User stats & admin control panel
+- User blocking, logs & backup system
 
 
 **Up coming features...**
@@ -102,25 +96,28 @@ If you have any questions or would like to sponsor this project in another way, 
 
 ### Bot Commands 
 ```
-start - Check Bot Online 🔔
-help - How To Use The Bot 🆘
-about - Something About Me 😌
-thumbnail - generate video thumbnail 🌁
-date - check date and time 🕰️
+start - Start the bot / check online
+help - How to use the bot
+about - Info about the bot
+stats - Admin stats (admin only)
+users - Show users summary (admin only)
+backupnow - Create backup (admin only)
 ```
 
 ### BUY ME A COFFEE 🥹
-<a href="https://www.buymeacoffee.com/lisakorean" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/arial-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+Coming... 
 
 ### My Community Details
 
 
-- YouTube Channel : [Telegram Bots 🤖](https://youtube.com/@NTBOT?feature=shared)
-- Telegram Channel : [NT Bots ❤️‍🩹](https://t.me/NT_BOT_CHANNEL)
-- Telegram Group : [NT Bots Support 🎗️](https://t.me/NT_BOTS_SUPPORT)
+- YouTube Channel : [Telegram Bots 🤖](https://youtube.com)
+- Telegram Channel : [Ethical Hacking ❤️‍🩹]([https://t.me/Ethicals_hacking])
+- Telegram Group : [Ethical Hacking Support 🎗️](https://t.me/Ethical_hacking_group)
 
 
 ### Credits ✌🏻
+### Credits ✌🏻
 
-* [Lisa 😌](https://github.com/LISA-KOREA)
-* [TG-SORRY 🥶](https://github.com/TG-SORRY)
+* Original base project – [Lisa 😌](https://github.com/LISA-KOREA)
+* Some fixes – [TG-SORRY 🥶](https://github.com/TG-SORRY)
+* Major modifications, admin panel & enhancements – **Tushar Davera**
